@@ -1,55 +1,281 @@
 <!doctype html>
-<html lang="en">
+<html>
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Get Location</title>
+        <title>Advanced Dual Compass</title>
+        <style>
+            html,
+            body {
+                background: radial-gradient(
+                    circle at center,
+                    #020202 0%,
+                    #000 100%
+                );
+                color: #0ff;
+                font-family: "Segoe UI", sans-serif;
+                text-align: center;
+                height: 100%;
+                margin: 0;
+                overflow: hidden;
+            }
+
+            h2 {
+                margin: 0.5em 0;
+                color: #0ff;
+                text-shadow: 0 0 10px #0ff;
+            }
+
+            #compass-container {
+                position: relative;
+                width: min(80vw, 320px);
+                height: min(80vw, 320px);
+                margin: 1.5em auto;
+                border-radius: 50%;
+                background: radial-gradient(
+                    circle at 50% 50%,
+                    #001 0%,
+                    #002 80%
+                );
+                box-shadow:
+                    0 0 30px #0ff4,
+                    0 0 60px #0ff2 inset;
+                overflow: hidden;
+            }
+
+            #ring {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 3px solid #0ff8;
+                border-radius: 50%;
+                box-shadow:
+                    0 0 15px #0ff6,
+                    0 0 30px #0ff3 inset;
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            #reflection {
+                position: absolute;
+                top: -10%;
+                left: -10%;
+                width: 120%;
+                height: 50%;
+                background: linear-gradient(
+                    to bottom,
+                    rgba(255, 255, 255, 0.25),
+                    rgba(255, 255, 255, 0) 70%
+                );
+                border-radius: 50%;
+                transform: rotate(-15deg);
+                filter: blur(6px);
+                opacity: 0.3;
+                z-index: 3;
+                pointer-events: none;
+            }
+
+            #directions {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                color: #0ff;
+                font-weight: bold;
+                font-size: 1.2em;
+                text-shadow: 0 0 5px #0ff;
+                transition: transform 0.3s ease-out;
+            }
+
+            .dir {
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .dir[data-pos="N"] {
+                top: 6%;
+            }
+            .dir[data-pos="S"] {
+                bottom: 6%;
+            }
+            .dir[data-pos="E"] {
+                right: 6%;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+            .dir[data-pos="W"] {
+                left: 6%;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            #arrow-compass,
+            #arrow-gps {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 4px;
+                height: 40%;
+                transform-origin: bottom center;
+                transform: translate(-50%, -100%) rotate(0deg);
+                border-radius: 2px;
+                transition: transform 0.2s ease-out;
+            }
+
+            #arrow-compass {
+                background: #f00;
+                box-shadow:
+                    0 0 10px #f004,
+                    0 0 20px #f00;
+                z-index: 5;
+            }
+
+            #arrow-gps {
+                background: #0f0;
+                box-shadow:
+                    0 0 10px #0f04,
+                    0 0 20px #0f0;
+                height: 35%;
+                opacity: 0.8;
+                z-index: 4;
+            }
+
+            pre {
+                margin: 1em auto;
+                width: fit-content;
+                background: #000a;
+                color: #0f0;
+                padding: 1em;
+                border-radius: 10px;
+                box-shadow: 0 0 10px #0f0a;
+                text-align: left;
+            }
+        </style>
     </head>
     <body>
-        <h1>Get Your Current Location</h1>
-        <button id="getLocationBtn">Request Location</button>
-        <p id="locationOutput"></p>
+        <h2>Dual Live Compass</h2>
+        <div id="compass-container">
+            <div id="directions">
+                <div class="dir" data-pos="N">N</div>
+                <div class="dir" data-pos="E">E</div>
+                <div class="dir" data-pos="S">S</div>
+                <div class="dir" data-pos="W">W</div>
+            </div>
+            <div id="arrow-gps"></div>
+            <div id="arrow-compass"></div>
+            <div id="ring"></div>
+            <div id="reflection"></div>
+        </div>
+        <pre id="output">Waiting for sensor data...</pre>
 
         <script>
-            const getLocationBtn = document.getElementById("getLocationBtn");
-            const locationOutput = document.getElementById("locationOutput");
+            const output = document.getElementById("output");
+            const arrowCompass = document.getElementById("arrow-compass");
+            const arrowGPS = document.getElementById("arrow-gps");
+            const directions = document.getElementById("directions");
 
-            getLocationBtn.addEventListener("click", () => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        showPosition,
-                        showError,
-                    );
+            let compassHeading = 0;
+            let gpsHeading = 0;
+
+            function smoothRotate(element, angle) {
+                element.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+            }
+
+            // --- Compass / Orientation ---
+            function setupCompass() {
+                function handleOrientation(event) {
+                    let headingDeg = null;
+                    if (event.webkitCompassHeading !== undefined) {
+                        headingDeg = event.webkitCompassHeading; // iOS
+                    } else if (event.absolute && event.alpha !== null) {
+                        headingDeg = 360 - event.alpha; // Android
+                    }
+
+                    if (headingDeg !== null) {
+                        compassHeading = headingDeg;
+                        smoothRotate(arrowCompass, headingDeg);
+                        // Rotate the direction ring opposite way to stay "north up"
+                        directions.style.transform = `rotate(${-headingDeg}deg)`;
+                    }
+                }
+
+                if (
+                    typeof DeviceOrientationEvent !== "undefined" &&
+                    typeof DeviceOrientationEvent.requestPermission ===
+                        "function"
+                ) {
+                    DeviceOrientationEvent.requestPermission()
+                        .then((response) => {
+                            if (response === "granted") {
+                                window.addEventListener(
+                                    "deviceorientation",
+                                    handleOrientation,
+                                    true,
+                                );
+                            } else {
+                                output.textContent +=
+                                    "\nCompass permission denied.";
+                            }
+                        })
+                        .catch(console.error);
                 } else {
-                    locationOutput.textContent =
-                        "Geolocation is not supported by this browser.";
-                }
-            });
-
-            function showPosition(position) {
-                locationOutput.textContent = `Latitude: ${position.coords.latitude}, Longitude: ${position.coords.longitude}`;
-            }
-
-            function showError(error) {
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        locationOutput.textContent =
-                            "User denied the request for Geolocation.";
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        locationOutput.textContent =
-                            "Location information is unavailable.";
-                        break;
-                    case error.TIMEOUT:
-                        locationOutput.textContent =
-                            "The request to get user location timed out.";
-                        break;
-                    case error.UNKNOWN_ERROR:
-                        locationOutput.textContent =
-                            "An unknown error occurred.";
-                        break;
+                    window.addEventListener(
+                        "deviceorientationabsolute",
+                        handleOrientation,
+                        true,
+                    );
+                    window.addEventListener(
+                        "deviceorientation",
+                        handleOrientation,
+                        true,
+                    );
                 }
             }
+
+            // --- GPS / Geolocation ---
+            function setupGPS() {
+                if (!navigator.geolocation) {
+                    output.textContent = "Geolocation not supported.";
+                    return;
+                }
+
+                const options = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                };
+                navigator.geolocation.watchPosition(
+                    (pos) => {
+                        const { latitude, longitude, speed, heading } =
+                            pos.coords;
+                        if (heading !== null) gpsHeading = heading;
+
+                        smoothRotate(arrowGPS, gpsHeading);
+
+                        const time = new Date(
+                            pos.timestamp,
+                        ).toLocaleTimeString();
+                        output.textContent = `
+Time: ${time}
+Lat:  ${latitude.toFixed(6)}
+Lon:  ${longitude.toFixed(6)}
+Speed: ${(speed ?? 0 * 3.6).toFixed(2)} km/h
+Compass: ${compassHeading.toFixed(1)}°
+Course:  ${gpsHeading.toFixed(1)}°
+          `;
+                    },
+                    (err) => {
+                        output.textContent = `Error: ${err.message}`;
+                    },
+                    options,
+                );
+            }
+
+            setupCompass();
+            setupGPS();
         </script>
     </body>
 </html>
