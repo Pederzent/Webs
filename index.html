@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>Advanced Dual Compass</title>
+        <title>GPS Heading Compass</title>
         <style>
             html,
             body {
@@ -112,35 +112,21 @@
                 transform: translateY(-50%);
             }
 
-            #arrow-compass,
             #arrow-gps {
                 position: absolute;
                 top: 50%;
                 left: 50%;
-                width: 4px;
+                width: 6px;
                 height: 40%;
+                background: #0f0;
+                box-shadow:
+                    0 0 15px #0f04,
+                    0 0 25px #0f0;
                 transform-origin: bottom center;
                 transform: translate(-50%, -100%) rotate(0deg);
                 border-radius: 2px;
-                transition: transform 0.2s ease-out;
-            }
-
-            #arrow-compass {
-                background: #f00;
-                box-shadow:
-                    0 0 10px #f004,
-                    0 0 20px #f00;
+                transition: transform 0.25s ease-out;
                 z-index: 5;
-            }
-
-            #arrow-gps {
-                background: #0f0;
-                box-shadow:
-                    0 0 10px #0f04,
-                    0 0 20px #0f0;
-                height: 35%;
-                opacity: 0.8;
-                z-index: 4;
             }
 
             pre {
@@ -156,7 +142,7 @@
         </style>
     </head>
     <body>
-        <h2>Dual Live Compass</h2>
+        <h2>GPS Heading Compass</h2>
         <div id="compass-container">
             <div id="directions">
                 <div class="dir" data-pos="N">N</div>
@@ -165,77 +151,23 @@
                 <div class="dir" data-pos="W">W</div>
             </div>
             <div id="arrow-gps"></div>
-            <div id="arrow-compass"></div>
             <div id="ring"></div>
             <div id="reflection"></div>
         </div>
-        <pre id="output">Waiting for sensor data...</pre>
+        <pre id="output">Waiting for GPS heading...</pre>
 
         <script>
             const output = document.getElementById("output");
-            const arrowCompass = document.getElementById("arrow-compass");
             const arrowGPS = document.getElementById("arrow-gps");
             const directions = document.getElementById("directions");
 
-            let compassHeading = 0;
             let gpsHeading = 0;
 
             function smoothRotate(element, angle) {
                 element.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+                directions.style.transform = `rotate(${-angle}deg)`; // keep north-up
             }
 
-            // --- Compass / Orientation ---
-            function setupCompass() {
-                function handleOrientation(event) {
-                    let headingDeg = null;
-                    if (event.webkitCompassHeading !== undefined) {
-                        headingDeg = event.webkitCompassHeading; // iOS
-                    } else if (event.absolute && event.alpha !== null) {
-                        headingDeg = 360 - event.alpha; // Android
-                    }
-
-                    if (headingDeg !== null) {
-                        compassHeading = headingDeg;
-                        smoothRotate(arrowCompass, headingDeg);
-                        // Rotate the direction ring opposite way to stay "north up"
-                        directions.style.transform = `rotate(${-headingDeg}deg)`;
-                    }
-                }
-
-                if (
-                    typeof DeviceOrientationEvent !== "undefined" &&
-                    typeof DeviceOrientationEvent.requestPermission ===
-                        "function"
-                ) {
-                    DeviceOrientationEvent.requestPermission()
-                        .then((response) => {
-                            if (response === "granted") {
-                                window.addEventListener(
-                                    "deviceorientation",
-                                    handleOrientation,
-                                    true,
-                                );
-                            } else {
-                                output.textContent +=
-                                    "\nCompass permission denied.";
-                            }
-                        })
-                        .catch(console.error);
-                } else {
-                    window.addEventListener(
-                        "deviceorientationabsolute",
-                        handleOrientation,
-                        true,
-                    );
-                    window.addEventListener(
-                        "deviceorientation",
-                        handleOrientation,
-                        true,
-                    );
-                }
-            }
-
-            // --- GPS / Geolocation ---
             function setupGPS() {
                 if (!navigator.geolocation) {
                     output.textContent = "Geolocation not supported.";
@@ -247,6 +179,7 @@
                     timeout: 10000,
                     maximumAge: 0,
                 };
+
                 navigator.geolocation.watchPosition(
                     (pos) => {
                         const { latitude, longitude, speed, heading } =
@@ -262,9 +195,8 @@
 Time: ${time}
 Lat:  ${latitude.toFixed(6)}
 Lon:  ${longitude.toFixed(6)}
-Speed: ${(speed ?? 0 * 3.6).toFixed(2)} km/h
-Compass: ${compassHeading.toFixed(1)}°
-Course:  ${gpsHeading.toFixed(1)}°
+Speed: ${(speed ? speed * 3.6 : 0).toFixed(2)} km/h
+Course: ${gpsHeading.toFixed(1)}°
           `;
                     },
                     (err) => {
@@ -274,7 +206,6 @@ Course:  ${gpsHeading.toFixed(1)}°
                 );
             }
 
-            setupCompass();
             setupGPS();
         </script>
     </body>
