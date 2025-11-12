@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>GPS Compass by Pederzent</title>
+        <title>GPS Compass</title>
         <style>
             body {
                 background: radial-gradient(circle at center, #0a0a0a, #000);
@@ -16,6 +16,16 @@
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
+            }
+            .title {
+                font-size: 28px;
+                color: #0ff;
+                text-shadow:
+                    0 0 8px #0ff,
+                    0 0 20px #0ff;
+                font-family: cursive;
+                font-style: italic;
+                margin-bottom: 10px;
             }
             .compass-wrapper {
                 position: relative;
@@ -226,6 +236,7 @@
         </style>
     </head>
     <body>
+        <div class="title">Pederzent</div>
         <div class="compass-wrapper">
             <div class="compass" id="compass">
                 <div class="needle" id="needle"></div>
