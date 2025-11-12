@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8" />
-        <title>GPS Heading Compass</title>
+        <title>GPS Compass</title>
         <style>
             body {
                 background: radial-gradient(circle at center, #0a0a0a, #000);
@@ -175,20 +175,36 @@
                 left: 6%;
                 transform: translate(-50%, -50%);
             }
+            .heading-display {
+                position: absolute;
+                top: 40%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 18px;
+                color: #0ff;
+                text-shadow: 0 0 5px #0ff;
+                pointer-events: none;
+            }
+            .speed-display {
+                position: absolute;
+                top: 60%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 18px;
+                color: #0ff;
+                text-shadow: 0 0 5px #0ff;
+                pointer-events: none;
+            }
             pre {
                 margin-top: 20px;
                 color: #0f0;
                 text-align: left;
                 white-space: pre-line;
-                font-size: 14px;
-                transition: font-size 0.2s ease;
+                font-size: 14px; /* Fixed font size */
                 background: rgba(0, 20, 20, 0.3);
                 padding: 10px 20px;
                 border-radius: 10px;
                 box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-            }
-            .buttons {
-                margin-top: 20px;
             }
             button {
                 margin: 0 5px;
@@ -213,39 +229,46 @@
         <div class="compass-wrapper">
             <div class="compass" id="compass">
                 <div class="needle" id="needle"></div>
-                <div class="labels">
+                <div class="labels" id="labels">
                     <div class="N">N</div>
                     <div class="S">S</div>
                     <div class="E">E</div>
                     <div class="W">W</div>
                 </div>
+                <div class="heading-display" id="heading-display">N/A</div>
+                <div class="speed-display" id="speed-display">N/A</div>
             </div>
         </div>
         <pre id="output">Waiting for GPS heading...</pre>
-        <div class="buttons">
-            <button onclick="zoomIn()">Zoom In</button>
-            <button onclick="zoomOut()">Zoom Out</button>
-        </div>
+        <button id="toggle-mode">Switch to Heading-Up Mode</button>
         <script>
             const needle = document.getElementById("needle");
             const output = document.getElementById("output");
-            let textScale = 1;
+            const headingDisplay = document.getElementById("heading-display");
+            const speedDisplay = document.getElementById("speed-display");
+            const labels = document.getElementById("labels");
+            const toggleButton = document.getElementById("toggle-mode");
             let currentHeading = 0;
             let targetHeading = 0;
-            function zoomIn() {
-                textScale += 0.1;
-                output.style.fontSize = `${14 * textScale}px`;
-            }
-            function zoomOut() {
-                textScale = Math.max(0.5, textScale - 0.1);
-                output.style.fontSize = `${14 * textScale}px`;
-            }
+            let isFixedCompass = true;
+            toggleButton.addEventListener("click", () => {
+                isFixedCompass = !isFixedCompass;
+                toggleButton.textContent = isFixedCompass
+                    ? "Switch to Heading-Up Mode"
+                    : "Switch to North-Up Mode";
+            });
             // Smooth rotation interpolation
             function smoothRotate() {
                 const diff =
                     ((targetHeading - currentHeading + 540) % 360) - 180;
                 currentHeading = (currentHeading + diff * 0.1 + 360) % 360;
-                needle.style.transform = `translateX(-50%) rotate(${currentHeading}deg)`;
+                if (isFixedCompass) {
+                    needle.style.transform = `translateX(-50%) rotate(${currentHeading}deg)`;
+                    labels.style.transform = `rotate(0deg)`;
+                } else {
+                    needle.style.transform = `translateX(-50%) rotate(0deg)`;
+                    labels.style.transform = `rotate(${-currentHeading}deg)`;
+                }
                 requestAnimationFrame(smoothRotate);
             }
             smoothRotate();
@@ -261,11 +284,11 @@
                     (pos) => {
                         const { heading, speed } = pos.coords;
                         if (heading !== null) targetHeading = heading;
-                        output.textContent = `
-GPS Heading: ${heading !== null ? heading.toFixed(1) + "°" : "N/A"}
-Speed: ${speed !== null ? (speed * 3.6).toFixed(2) + " km/h" : "N/A"}
-Local Time: ${updateTime()}
-          `;
+                        headingDisplay.textContent =
+                            heading !== null ? heading.toFixed(1) : "N/A";
+                        speedDisplay.textContent =
+                            speed !== null ? (speed * 3.6).toFixed(1) : "N/A";
+                        output.textContent = `Local Time: ${updateTime()}`;
                     },
                     (err) => (output.textContent = `Error: ${err.message}`),
                     { enableHighAccuracy: true, maximumAge: 0 },
@@ -274,12 +297,7 @@ Local Time: ${updateTime()}
                 output.textContent = "Geolocation not supported.";
             }
             setInterval(() => {
-                if (output.textContent.includes("Local Time:")) {
-                    output.textContent = output.textContent.replace(
-                        /Local Time: .*/,
-                        `Local Time: ${updateTime()}`,
-                    );
-                }
+                output.textContent = `Local Time: ${updateTime()}`;
             }, 1000);
         </script>
     </body>
