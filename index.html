@@ -4,209 +4,283 @@
         <meta charset="UTF-8" />
         <title>GPS Heading Compass</title>
         <style>
-            html,
             body {
+                background: radial-gradient(circle at center, #0a0a0a, #000);
+                color: #0f0;
+                font-family: monospace;
+                text-align: center;
+                margin: 0;
+                height: 100vh;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+            .compass-wrapper {
+                position: relative;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            /* Floating cyan shadow beneath compass */
+            .compass-wrapper::before {
+                content: "";
+                position: absolute;
+                bottom: -20px;
+                width: 220px;
+                height: 30px;
+                background: radial-gradient(
+                    ellipse at center,
+                    rgba(0, 255, 255, 0.15),
+                    transparent 70%
+                );
+                filter: blur(10px);
+                border-radius: 50%;
+                z-index: 0;
+            }
+            .compass {
+                position: relative;
+                width: 250px;
+                height: 250px;
+                border-radius: 50%;
                 background: radial-gradient(
                     circle at center,
-                    #020202 0%,
-                    #000 100%
+                    #111 0%,
+                    #000 90%
                 );
-                color: #0ff;
-                font-family: "Segoe UI", sans-serif;
-                text-align: center;
-                height: 100%;
-                margin: 0;
-                overflow: hidden;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                box-shadow:
+                    inset 0 5px 15px rgba(0, 255, 255, 0.3),
+                    inset 0 -5px 20px rgba(0, 128, 128, 0.6),
+                    0 5px 25px rgba(0, 255, 255, 0.2),
+                    0 -5px 30px rgba(0, 255, 255, 0.15);
+                border: 6px solid transparent;
+                background-clip: padding-box;
+                z-index: 1;
+                animation: pulseGlow 6s ease-in-out infinite;
             }
-
-            h2 {
-                margin: 0.5em 0;
-                color: #0ff;
-                text-shadow: 0 0 10px #0ff;
+            /* Breathing cyan glow animation */
+            @keyframes pulseGlow {
+                0%,
+                100% {
+                    box-shadow:
+                        inset 0 5px 15px rgba(0, 255, 255, 0.3),
+                        inset 0 -5px 20px rgba(0, 128, 128, 0.6),
+                        0 5px 25px rgba(0, 255, 255, 0.2),
+                        0 -5px 30px rgba(0, 255, 255, 0.15),
+                        0 0 15px rgba(0, 255, 255, 0.2);
+                }
+                50% {
+                    box-shadow:
+                        inset 0 6px 20px rgba(0, 255, 255, 0.5),
+                        inset 0 -6px 25px rgba(0, 128, 128, 0.7),
+                        0 0 40px rgba(0, 255, 255, 0.5),
+                        0 0 70px rgba(0, 255, 255, 0.3);
+                }
             }
-
-            #compass-container {
-                position: relative;
-                width: min(80vw, 320px);
-                height: min(80vw, 320px);
-                margin: 1.5em auto;
+            /* Metallic 3D rim */
+            .compass::before {
+                content: "";
+                position: absolute;
+                inset: -6px;
+                border-radius: 50%;
+                background: linear-gradient(145deg, #033, #0aa, #011);
+                box-shadow:
+                    inset 2px 2px 5px rgba(255, 255, 255, 0.3),
+                    inset -4px -4px 10px rgba(0, 0, 0, 0.7),
+                    0 0 25px rgba(0, 255, 255, 0.4);
+                z-index: -2;
+            }
+            /* Thin glass reflection */
+            .compass::after {
+                content: "";
+                position: absolute;
+                inset: 0;
                 border-radius: 50%;
                 background: radial-gradient(
-                    circle at 50% 50%,
-                    #001 0%,
-                    #002 80%
+                    circle at 30% 20%,
+                    rgba(255, 255, 255, 0.25) 0%,
+                    rgba(255, 255, 255, 0.08) 30%,
+                    rgba(255, 255, 255, 0.02) 60%,
+                    rgba(255, 255, 255, 0) 100%
                 );
-                box-shadow:
-                    0 0 30px #0ff4,
-                    0 0 60px #0ff2 inset;
-                overflow: hidden;
-            }
-
-            #ring {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                border: 3px solid #0ff8;
-                border-radius: 50%;
-                box-shadow:
-                    0 0 15px #0ff6,
-                    0 0 30px #0ff3 inset;
-                z-index: 2;
-                pointer-events: none;
-            }
-
-            #reflection {
-                position: absolute;
-                top: -10%;
-                left: -10%;
-                width: 120%;
-                height: 50%;
-                background: linear-gradient(
-                    to bottom,
-                    rgba(255, 255, 255, 0.25),
-                    rgba(255, 255, 255, 0) 70%
-                );
-                border-radius: 50%;
                 transform: rotate(-15deg);
-                filter: blur(6px);
-                opacity: 0.3;
-                z-index: 3;
+                filter: blur(1px);
                 pointer-events: none;
+                z-index: 10;
             }
-
-            #directions {
+            /* Needle shaft */
+            .needle {
+                position: absolute;
+                width: 6px;
+                height: 100px; /* Adjusted to end before the ring */
+                background: linear-gradient(90deg, #800, #f00, #800);
+                transform-origin: 50% 100%;
+                border-radius: 3px;
+                bottom: 50%;
+                left: 50%;
+                box-shadow:
+                    0 0 10px rgba(255, 0, 0, 0.5),
+                    0 0 25px rgba(255, 0, 0, 0.2),
+                    2px 0 4px rgba(0, 0, 0, 0.3); /* Slight shadow for 3D depth */
+            }
+            /* Arrowhead */
+            .needle::before {
+                content: "";
+                position: absolute;
+                top: -12px;
+                left: -5px;
+                width: 0;
+                height: 0;
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-bottom: 12px solid #f00;
+                filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.5));
+            }
+            /* Direction labels */
+            .labels {
                 position: absolute;
                 width: 100%;
                 height: 100%;
-                top: 0;
-                left: 0;
-                color: #0ff;
+                font-size: 20px;
                 font-weight: bold;
-                font-size: 1.2em;
-                text-shadow: 0 0 5px #0ff;
-                transition: transform 0.3s ease-out;
+                color: #0ff;
+                text-shadow:
+                    0 0 8px #0ff,
+                    0 0 20px #0ff8;
+                pointer-events: none;
             }
-
-            .dir {
+            .labels div {
                 position: absolute;
-                left: 50%;
-                transform: translateX(-50%);
+                transform: translate(-50%, -50%);
             }
-
-            .dir[data-pos="N"] {
+            .N {
                 top: 6%;
-            }
-            .dir[data-pos="S"] {
-                bottom: 6%;
-            }
-            .dir[data-pos="E"] {
-                right: 6%;
-                top: 50%;
-                transform: translateY(-50%);
-            }
-            .dir[data-pos="W"] {
-                left: 6%;
-                top: 50%;
-                transform: translateY(-50%);
-            }
-
-            #arrow-gps {
-                position: absolute;
-                top: 50%;
                 left: 50%;
-                width: 6px;
-                height: 40%;
-                background: #0f0;
-                box-shadow:
-                    0 0 15px #0f04,
-                    0 0 25px #0f0;
-                transform-origin: bottom center;
-                transform: translate(-50%, -100%) rotate(0deg);
-                border-radius: 2px;
-                transition: transform 0.25s ease-out;
-                z-index: 5;
             }
-
+            .S {
+                bottom: 4%;
+                left: 50%;
+            }
+            .E {
+                top: 50%;
+                right: 4%;
+                transform: translate(50%, -50%);
+            }
+            .W {
+                top: 50%;
+                left: 6%;
+                transform: translate(-50%, -50%);
+            }
             pre {
-                margin: 1em auto;
-                width: fit-content;
-                background: #000a;
+                margin-top: 20px;
                 color: #0f0;
-                padding: 1em;
-                border-radius: 10px;
-                box-shadow: 0 0 10px #0f0a;
                 text-align: left;
+                white-space: pre-line;
+                font-size: 14px;
+                transition: font-size 0.2s ease;
+                background: rgba(0, 20, 20, 0.3);
+                padding: 10px 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            }
+            .buttons {
+                margin-top: 20px;
+            }
+            button {
+                margin: 0 5px;
+                background: #022;
+                color: #0ff;
+                border: 1px solid #0ff;
+                border-radius: 8px;
+                padding: 8px 16px;
+                cursor: pointer;
+                font-size: 14px;
+                transition:
+                    background 0.2s,
+                    transform 0.1s;
+            }
+            button:hover {
+                background: #044;
+                transform: scale(1.05);
             }
         </style>
     </head>
     <body>
-        <h2>GPS Heading Compass</h2>
-        <div id="compass-container">
-            <div id="directions">
-                <div class="dir" data-pos="N">N</div>
-                <div class="dir" data-pos="E">E</div>
-                <div class="dir" data-pos="S">S</div>
-                <div class="dir" data-pos="W">W</div>
+        <div class="compass-wrapper">
+            <div class="compass" id="compass">
+                <div class="needle" id="needle"></div>
+                <div class="labels">
+                    <div class="N">N</div>
+                    <div class="S">S</div>
+                    <div class="E">E</div>
+                    <div class="W">W</div>
+                </div>
             </div>
-            <div id="arrow-gps"></div>
-            <div id="ring"></div>
-            <div id="reflection"></div>
         </div>
         <pre id="output">Waiting for GPS heading...</pre>
-
+        <div class="buttons">
+            <button onclick="zoomIn()">Zoom In</button>
+            <button onclick="zoomOut()">Zoom Out</button>
+        </div>
         <script>
+            const needle = document.getElementById("needle");
             const output = document.getElementById("output");
-            const arrowGPS = document.getElementById("arrow-gps");
-            const directions = document.getElementById("directions");
-
-            let gpsHeading = 0;
-
-            function smoothRotate(element, angle) {
-                element.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
-                directions.style.transform = `rotate(${-angle}deg)`; // keep north-up
+            let textScale = 1;
+            let currentHeading = 0;
+            let targetHeading = 0;
+            function zoomIn() {
+                textScale += 0.1;
+                output.style.fontSize = `${14 * textScale}px`;
             }
-
-            function setupGPS() {
-                if (!navigator.geolocation) {
-                    output.textContent = "Geolocation not supported.";
-                    return;
-                }
-
-                const options = {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0,
-                };
-
+            function zoomOut() {
+                textScale = Math.max(0.5, textScale - 0.1);
+                output.style.fontSize = `${14 * textScale}px`;
+            }
+            // Smooth rotation interpolation
+            function smoothRotate() {
+                const diff =
+                    ((targetHeading - currentHeading + 540) % 360) - 180;
+                currentHeading = (currentHeading + diff * 0.1 + 360) % 360;
+                needle.style.transform = `translateX(-50%) rotate(${currentHeading}deg)`;
+                requestAnimationFrame(smoothRotate);
+            }
+            smoothRotate();
+            function updateTime() {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, "0");
+                const mm = String(now.getMinutes()).padStart(2, "0");
+                const ss = String(now.getSeconds()).padStart(2, "0");
+                return `${hh}:${mm}:${ss}`;
+            }
+            if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(
                     (pos) => {
-                        const { latitude, longitude, speed, heading } =
-                            pos.coords;
-                        if (heading !== null) gpsHeading = heading;
-
-                        smoothRotate(arrowGPS, gpsHeading);
-
-                        const time = new Date(
-                            pos.timestamp,
-                        ).toLocaleTimeString();
+                        const { heading, speed } = pos.coords;
+                        if (heading !== null) targetHeading = heading;
                         output.textContent = `
-Time: ${time}
-Lat:  ${latitude.toFixed(6)}
-Lon:  ${longitude.toFixed(6)}
-Speed: ${(speed ? speed * 3.6 : 0).toFixed(2)} km/h
-Course: ${gpsHeading.toFixed(1)}°
+GPS Heading: ${heading !== null ? heading.toFixed(1) + "°" : "N/A"}
+Speed: ${speed !== null ? (speed * 3.6).toFixed(2) + " km/h" : "N/A"}
+Local Time: ${updateTime()}
           `;
                     },
-                    (err) => {
-                        output.textContent = `Error: ${err.message}`;
-                    },
-                    options,
+                    (err) => (output.textContent = `Error: ${err.message}`),
+                    { enableHighAccuracy: true, maximumAge: 0 },
                 );
+            } else {
+                output.textContent = "Geolocation not supported.";
             }
-
-            setupGPS();
+            setInterval(() => {
+                if (output.textContent.includes("Local Time:")) {
+                    output.textContent = output.textContent.replace(
+                        /Local Time: .*/,
+                        `Local Time: ${updateTime()}`,
+                    );
+                }
+            }, 1000);
         </script>
     </body>
 </html>
